@@ -14,13 +14,12 @@ import HeatmapGenerator as hg
 pg.init()
 
 # World
-world_size = (4, 4)
-room_size = (12, 12)
-
+world_size = (5, 5)
+room_size = (10, 10)
 
 # Window
-tile_size = 16
-scale = 5
+tile_size = 32
+scale = 2
 win_tiles = 11
 win_size = win_tiles * tile_size * scale
 win_center = int(win_tiles / 2)
@@ -30,16 +29,11 @@ pg.display.set_caption("W A S D")
 # Timer
 clock = pg.time.Clock()
 
-# Position
-x, y = 0, 0
-
 # Load tileset
 tileset = pg.image.load("Tileset32.png")
 tileset_dim = tileset.get_size()
 
 tiles = []
-tile_size = 32
-
 
 for y in range(tileset_dim[1] // tile_size):
     tiles_temp = []
@@ -50,9 +44,9 @@ for y in range(tileset_dim[1] // tile_size):
 
 tiles_all = [[pg.transform.scale(t, (tile_size * scale, tile_size * scale)) for t in tile] for tile in tiles]
 
-# Devtools
+"""DEVTOOL"""
 heat = False
-
+"""^^^"""
 # World
 
 class world(object):
@@ -121,7 +115,8 @@ class world(object):
 class player(object):
     def __init__(self, x, y):
         # Traits
-        self.hp = 10
+        self.start_hp = 15
+        self.hp = 15
 
         # Position
         self.x = x
@@ -141,6 +136,9 @@ class player(object):
         self.standby = tiles_all[1][0:2]
         self.attack = []
         self.attack_time = time.time()
+        self.hp_bar = []
+        for img in tiles_all[6][0:2]:
+            self.hp_bar.append(pg.transform.scale(img, (int(win_size * 0.60 // self.start_hp), int(win_size * 0.05))))
 
     def draw(self, x=win_center, y=win_center):
         # Draw Player
@@ -152,6 +150,11 @@ class player(object):
         else:
             self.standby_frame = int((time.time() - self.standby_time) * self.standby_fps % self.standby_nof)
             win.blit(self.standby[self.standby_frame], (x * tile_size * scale, y * tile_size * scale))
+
+        hb_width, hb_height = self.hp_bar[0].get_rect().size
+        for d in range(self.start_hp):
+            win.blit(self.hp_bar[0 if self.hp > d else 1], (d * hb_width + (-1 * hb_width * self.start_hp + win_size) / 2, win_size * 0.01))
+
 
     def action(self, d_x, d_y):
         self.attack = []
@@ -178,7 +181,7 @@ class player(object):
             left = 0
             for e_pos in world.enemies_pos[self.room_y][self.room_x]:
                 left += 1
-                world.enemies.append(basicEnemy(e_pos[0] + self.room_x * room_size[0], e_pos[1] + self.room_y * room_size[0]))
+                world.enemies.append(basicEnemy(e_pos[0] + self.room_x * room_size[0], e_pos[1] + self.room_y * room_size[1]))
             world.enemies_left[str(self.room_x)+str(self.room_y)] = left
 
     def controls(self):
@@ -431,7 +434,6 @@ def updateWin():
 # Startup
 mip = player(1, 1)
 world = world()
-enemies = [basicEnemy(5, 5), basicEnemy(6, 6)]
 p = particle(4, 4)
 
 # Main
