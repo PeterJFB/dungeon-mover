@@ -4,7 +4,7 @@ from PIL import Image
 import RoomGenerator as rm
 
 
-def generateMap(size, room_size,start, show=False):
+def generateMap(size, room_size, start, show=False):
     # define size of grid
     cell_grid = (size[0] * 2 - 1, size[1] * 2 - 1)
     # define starting position
@@ -102,7 +102,8 @@ def generateMap(size, room_size,start, show=False):
                                         exits=findExits(x, y),
                                         cluster=20,
                                         enemies=randint(1, 4),
-                                        typ=typ)
+                                        typ=typ,
+                                   show=False)
 
             world.paste(room.room,  (x * room_size[0], y * room_size[1]))
             rooms_temp.append(room)
