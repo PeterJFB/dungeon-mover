@@ -92,7 +92,7 @@ class world(object):
                 elif self.pixels[x - win_center + win_x, y - win_center + win_y] == self.ENEMY:
                     win.blit(self.tiles[1], (win_x * tile_size * scale, win_y * tile_size * scale))
         # Draw Entities
-        for p in particles:
+        for p in particles[:]:
             p.update()
         for enemy in world.enemies:
             if x - win_center <= enemy.x < x - win_center + win_tiles and y - win_center <= enemy.y < y - win_center + win_tiles:
@@ -295,13 +295,12 @@ class particle(object):
         self.fps = 10
         self.frame = 0
         self.frames = tiles_all[5][0:5]
-        self.draw = True
 
     def update(self):
         self.frame = int((time.time() - self.time) * self.fps % self.nof)
         if int((time.time() - self.time) * self.fps % (self.nof + 1)) == 5:
-            self.draw = False
-        if self.draw:
+            particles.remove(self)
+        else:
             win.blit(self.frames[self.frame], ((self.x - mip.x + win_center) * tile_size * scale, (self.y - mip.y + win_center) * tile_size * scale))
 
 
