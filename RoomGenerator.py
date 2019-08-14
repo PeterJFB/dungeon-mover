@@ -53,7 +53,9 @@ class generateRoom(object):
 
         # Final quality check
         if len(exits) > 1:
-            left = 2 * len(exits) - 1
+            left = 2 * len(exits) + len(self.enemies_pos) - 1
+            if typ in ['start', 'end']:
+                left += 3
             area_used = [[0 for y in range(self.room.size[0])]for x in range(self.room.size[1])]
             active = [[(size[0] - 1) // 2 * (1 + exits[0][0]) + (1 + exits[0][0]) // 2,
                        (size[1] - 1) // 2 * (1 + exits[0][1]) + (1 + exits[0][1]) // 2]]
@@ -70,7 +72,7 @@ class generateRoom(object):
                             continue
                         if area_used[a[0] + d_x][a[1] + d_y]:
                             continue
-                        if room_pix[a[0] + d_x, a[1] + d_y] == GREEN:
+                        if room_pix[a[0] + d_x, a[1] + d_y] in [GREEN, RED, BLUE]:
                             left -= 1
                         area_used[a[0] + d_x][a[1] + d_y] = 1
                         active.append([a[0] + d_x, a[1] + d_y])
