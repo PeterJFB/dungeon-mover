@@ -133,7 +133,7 @@ class player(object):
         self.standby_time = time.time()
         self.standby_frame = 0
         self.standby_nof = 2
-        self.standby = tiles_all[1][0:2]
+        self.standby = tiles_all[2][0:2]
         self.attack = []
         self.attack_time = time.time()
         self.hp_bar = []
@@ -324,7 +324,7 @@ class basicEnemy(object):
         self.standby_fps = 4
         self.standby_frame = 0
         self.standby_nof = 2
-        self.standby = tiles_all[2][0:2]
+        self.standby = tiles_all[1][0:2]
         self.hb = tiles_all[3][0:2]
         self.hb_offset = -25
         self.attacked = []
