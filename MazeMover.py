@@ -20,9 +20,13 @@ room_size = (10, 10)
 # Window
 tile_size = 32
 scale = 2
+tile_scale = tile_size * scale
+
 win_tiles = 11
-win_size = win_tiles * tile_size * scale
+win_size = win_tiles * tile_scale
+
 win_center = int(win_tiles / 2)
+
 win = pg.display.set_mode((win_size, win_size))
 pg.display.set_caption("W A S D")
 
@@ -42,7 +46,7 @@ for y in range(tileset_dim[1] // tile_size):
         tiles_temp.append(tileset.subsurface(tile_dim))
     tiles.append(tiles_temp)
 
-tiles_all = [[pg.transform.scale(t, (tile_size * scale, tile_size * scale)) for t in tile] for tile in tiles]
+tiles_all = [[pg.transform.scale(t, (tile_scale, tile_scale)) for t in tile] for tile in tiles]
 
 """DEVTOOL"""
 heat = False
@@ -59,6 +63,11 @@ class world(object):
         self.enemy = tiles_all[2][0]
 
         # Tiles Color Code
+        self.tile_code = {"(0, 0, 0, 255)": self.tiles[0],         # WALL
+                          "(255, 255, 255, 255)": self.tiles[1],   # FLOOR
+                          "(0, 0, 255, 255)": self.tiles[2],       # STARTEND
+                          "(0, 255, 0, 255)": self.tiles[3],       # GATE
+                          "(255, 0, 0, 255)": self.tiles[1]}       # ENEMY/FLOOR
         self.WALL = (0, 0, 0, 255)
         self.FLOOR = (255, 255, 255, 255)
         self.STARTEND = (0, 0, 255, 255)
@@ -75,28 +84,18 @@ class world(object):
             for win_y in range(win_tiles):
                 # Wall Boundaries
                 if not 0 <= x - win_center + win_x < self.size[0] or not 0 <= y - win_center + win_y < self.size[1]:
-                    win.blit(self.tiles[0], (win_x * tile_size * scale, win_y * tile_size * scale))
+                    win.blit(self.tiles[0], (win_x * tile_scale, win_y * tile_scale))
                 # Wall in Maze
-                elif self.pixels[x - win_center + win_x, y - win_center + win_y] == self.WALL:
-                    win.blit(self.tiles[0], (win_x * tile_size * scale, win_y * tile_size * scale))
-                # Floor
-                elif self.pixels[x - win_center + win_x, y - win_center + win_y] == self.FLOOR:
-                    win.blit(self.tiles[1], (win_x * tile_size * scale, win_y * tile_size * scale))
-                # Start/End tile
-                elif self.pixels[x - win_center + win_x, y - win_center + win_y] == self.STARTEND:
-                    win.blit(self.tiles[2], (win_x * tile_size * scale, win_y * tile_size * scale))
-                # Gate
-                elif self.pixels[x - win_center + win_x, y - win_center + win_y] == self.GATE:
-                    win.blit(self.tiles[3], (win_x * tile_size * scale, win_y * tile_size * scale))
-                # TEMP
-                elif self.pixels[x - win_center + win_x, y - win_center + win_y] == self.ENEMY:
-                    win.blit(self.tiles[1], (win_x * tile_size * scale, win_y * tile_size * scale))
+                else:
+                    color_code = str(self.pixels[x - win_center + win_x, y - win_center + win_y])
+                    win.blit(self.tile_code[color_code], (win_x * tile_scale, win_y * tile_scale))
+
         # Draw Entities
         for p in particles[:]:
             p.update()
         for enemy in world.enemies:
-            if x - win_center <= enemy.x < x - win_center + win_tiles and y - win_center <= enemy.y < y - win_center + win_tiles:
-                enemy.draw((enemy.x - x + win_center) * tile_size * scale, (enemy.y - y + win_center) * tile_size * scale)
+            if x - win_center <= enemy.x < x + win_center + 1 and y - win_center <= enemy.y < y + win_center + 1:
+                enemy.draw((enemy.x - x + win_center) * tile_scale, (enemy.y - y + win_center) * tile_scale)
 
 
     def openExits(self, x, y): # Open exit of specific room
@@ -146,15 +145,15 @@ class player(object):
         if self.attack and not -1 * t**2 + 0.1*t <= 0:
             d_x = int(self.attack[0] * 2000 * (-1 * t**2 + 0.1*t)) * 2 * scale
             d_y = int(self.attack[1] * 2000 * (-1 * t**2 + 0.1*t)) * 2 * scale
-            win.blit(self.standby[self.standby_frame], (d_x + x * tile_size * scale, d_y + y * tile_size * scale))
+            win.blit(self.standby[self.standby_frame], (d_x + x * tile_scale, d_y + y * tile_scale))
         else:
             self.standby_frame = int((time.time() - self.standby_time) * self.standby_fps % self.standby_nof)
-            win.blit(self.standby[self.standby_frame], (x * tile_size * scale, y * tile_size * scale))
+            win.blit(self.standby[self.standby_frame], (x * tile_scale, y * tile_scale))
 
         hb_width, hb_height = self.hp_bar[0].get_rect().size
         for d in range(self.start_hp):
-            win.blit(self.hp_bar[0 if self.hp > d else 1], (d * hb_width + (-1 * hb_width * self.start_hp + win_size) / 2, win_size * 0.01))
-
+            hb_offset = (-hb_width * self.start_hp + win_size) / 2
+            win.blit(self.hp_bar[0 if self.hp > d else 1], (d * hb_width + hb_offset, win_size * 0.01))
 
     def action(self, d_x, d_y):
         self.attack = []
@@ -167,7 +166,7 @@ class player(object):
                 break
 
         else:
-            if world.pixels[self.x + d_x, self.y + d_y] != world.WALL:
+            if world.pixels[self.x + d_x, self.y + d_y] not in [world.WALL, world.GATE]:
                 self.x, self.y = self.x + d_x, self.y + d_y
 
         world.enemies.sort(key=lambda e: abs(e.x - self.x) + abs(e.y - self.y))
@@ -181,7 +180,8 @@ class player(object):
             left = 0
             for e_pos in world.enemies_pos[self.room_y][self.room_x]:
                 left += 1
-                world.enemies.append(basicEnemy(e_pos[0] + self.room_x * room_size[0], e_pos[1] + self.room_y * room_size[1]))
+                world.enemies.append(basicEnemy(e_pos[0] + self.room_x * room_size[0],
+                                                e_pos[1] + self.room_y * room_size[1]))
             world.enemies_left[str(self.room_x)+str(self.room_y)] = left
 
     def controls(self):
@@ -266,7 +266,8 @@ def pathFinder(start): # Pathfinding algorithm for enemies (Put in separate file
                 for i, a in enumerate(active):
                     if a[2] + a[3] >= active_g + 1 + active_h:
                         try:
-                            if a[3] >= abs(active_x + d_x - mip.x) + abs(active_y + d_y - mip.y) or a[2] + a[3] != active[i + 1][2] + active[i + 1][3]:
+                            if a[3] >= abs(active_x + d_x - mip.x) + abs(active_y + d_y - mip.y) \
+                                            or a[2] + a[3] != active[i + 1][2] + active[i + 1][3]:
                                 active = active[:i] + [[[active_x + d_x, active_y + d_y],
                                                         active_d,
                                                         active_g + 1,
@@ -301,7 +302,8 @@ class particle(object):
         if int((time.time() - self.time) * self.fps % (self.nof + 1)) == 5:
             particles.remove(self)
         else:
-            win.blit(self.frames[self.frame], ((self.x - mip.x + win_center) * tile_size * scale, (self.y - mip.y + win_center) * tile_size * scale))
+            win_x, win_y = self.x - mip.x + win_center, self.y - mip.y + win_center
+            win.blit(self.frames[self.frame], (win_x * tile_scale, win_y * tile_scale))
 
 
 # Enemy
@@ -325,7 +327,7 @@ class basicEnemy(object):
         self.standby_nof = 2
         self.standby = tiles_all[1][0:2]
         self.hb = tiles_all[3][0:2]
-        self.hb_offset = -25
+        self.hbo = -25 # Healthbar offset
         self.attacked = []
         self.a_area = tiles_all[4][0:2] # Area area
         self.a_attack = tiles_all[5][0:5] # area Attack
@@ -378,8 +380,8 @@ class basicEnemy(object):
         # Healthbar
         hb_size = self.hb[0].get_rect().size[0] * self.hp / self.hp_og
         d_hbo = int((time.time() - mip.standby_time) * 2 % 2)
-        win.blit(self.hb[1], (pos_x, pos_y + self.hb_offset + d_hbo))
-        win.blit(self.hb[0], (pos_x, pos_y + self.hb_offset + d_hbo), pg.Rect(0, 0, hb_size, self.hb[0].get_rect().size[1]))
+        win.blit(self.hb[1], (pos_x, pos_y + self.hbo + d_hbo))
+        win.blit(self.hb[0], (pos_x, pos_y + self.hbo + d_hbo), pg.Rect(0, 0, hb_size, self.hb[0].get_rect().size[1]))
         # Area
         if self.b_up:
             for d_x in range(-1, 2):
@@ -391,7 +393,7 @@ class basicEnemy(object):
                     if enemy_area[self.x + d_x][self.y + d_y]:
                         continue
                     area_frame = int((time.time() - mip.standby_time) * 2 % 2)
-                    win.blit(self.a_area[area_frame], (pos_x + d_x * tile_size * scale, pos_y + d_y * tile_size * scale))
+                    win.blit(self.a_area[area_frame], (pos_x + d_x * tile_scale, pos_y + d_y * tile_scale))
 
 
 # Input

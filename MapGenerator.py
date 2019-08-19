@@ -99,10 +99,10 @@ def generateMap(size, room_size, start, show=False):
                 typ = 'other'
 
             room = rm.generateRoom(size=room_size,
-                                        exits=findExits(x, y),
-                                        cluster=20,
-                                        enemies=randint(1, 4),
-                                        typ=typ,
+                                   exits=findExits(x, y),
+                                   cluster=20,
+                                   enemies=randint(1, 4),
+                                   typ=typ,
                                    show=False)
 
             world.paste(room.room,  (x * room_size[0], y * room_size[1]))
