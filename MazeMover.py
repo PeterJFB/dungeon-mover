@@ -38,7 +38,6 @@ tileset = pg.image.load("Tileset32.png")
 tileset_dim = tileset.get_size()
 
 tiles = []
-
 for y in range(tileset_dim[1] // tile_size):
     tiles_temp = []
     for x in range(tileset_dim[0] // tile_size):
@@ -47,6 +46,18 @@ for y in range(tileset_dim[1] // tile_size):
     tiles.append(tiles_temp)
 
 tiles_all = [[pg.transform.scale(t, (tile_scale, tile_scale)) for t in tile] for tile in tiles]
+
+
+# counter
+counter_font = pg.font.Font("Ode to Idle Gaming.ttf", 32)
+
+# Frame PLS FINISH
+frame = pg.transform.scale(tiles_all[6][4], (win_size, win_size))
+for x in range(win_tiles):
+    for y in range(win_tiles):
+        if x not in [0, win_tiles - 1] and y not in [0, win_tiles - 1]:
+            continue
+frame_final = pg.image.load("frame.png")
 
 """DEVTOOL"""
 heat = False
@@ -126,6 +137,7 @@ class player(object):
 
         # Movement
         self.pressed = {}
+        self.counter = 0
 
         # Draw
         self.standby_fps = 4
@@ -149,13 +161,23 @@ class player(object):
         else:
             self.standby_frame = int((time.time() - self.standby_time) * self.standby_fps % self.standby_nof)
             win.blit(self.standby[self.standby_frame], (x * tile_scale, y * tile_scale))
-
+        # Draw Healthbar
         hb_width, hb_height = self.hp_bar[0].get_rect().size
         for d in range(self.start_hp):
             hb_offset = (-hb_width * self.start_hp + win_size) / 2
             win.blit(self.hp_bar[0 if self.hp > d else 1], (d * hb_width + hb_offset, win_size * 0.01))
+        # Draw Counter
+        counter_text = counter_font.render(str(self.counter), False, (155, 188, 15))
+        counter_rect = counter_text.get_rect()
+        counter_rect.center = (win_size // 2, 70)
+        counter_text_outline = counter_font.render(str(self.counter), False, (15, 56, 15))
+        for d_x in range(-1, 2):
+            for d_y in range(-1, 2):
+                win.blit(counter_text_outline, (counter_rect.x + d_x * 4, counter_rect.y + d_y * 4))
+        win.blit(counter_text, counter_rect)
 
     def action(self, d_x, d_y):
+        self.counter += 1
         self.attack = []
         for enemy in world.enemies:
             if [self.x + d_x, self.y + d_y] == [enemy.x, enemy.y]:
@@ -219,6 +241,7 @@ def pathFinder(start): # Pathfinding algorithm for enemies (Put in separate file
     used_area[start[0]][start[1]] = 1
     active = []
     history = []
+    # Generation of first nodes
     for d_x in range(-1, 2):
         for d_y in range(-1, 2):
             if abs(d_x) == abs(d_y):
@@ -234,26 +257,28 @@ def pathFinder(start): # Pathfinding algorithm for enemies (Put in separate file
                            abs(start[0] + d_x - mip.x) + abs(start[1] + d_y - mip.y)
                            ])
     active.sort(key=lambda x: x[3])
+    # Beginning of pathfinding
     while active:
         kill += 1
-        active_x = active[0][0][0]
-        active_y = active[0][0][1]
+        active_x, active_y = active[0][0][0], active[0][0][1]
         active_d = active[0][1]
-        active_g = active[0][2]
-        active_h = active[0][3]
-        history.append([active_x, active_y])
+        active_g, active_h = active[0][2], active[0][3]
+
+        if heat:
+            history.append([active_x, active_y]) # History for heatmap
+
         for d_x in range(-1, 2):
             for d_y in range(-1, 2):
 
-                if abs(d_x) == abs(d_y):
+                if abs(d_x) == abs(d_y): # Ignore corners and center
                     continue
 
-                if [active_x + d_x, active_y + d_y] == [mip.x, mip.y]:
+                if [active_x + d_x, active_y + d_y] == [mip.x, mip.y]: # If player is found
                     """DEVTOOLS"""
                     if heat:
                         hg.heatMap(history)
                     """^^^"""
-                    if enemy_area[start[0] + active_d[0]][start[1] + active_d[1]]:
+                    if enemy_area[start[0] + active_d[0]][start[1] + active_d[1]]: # Won't move if enemy is in the way
                         return [0, 0]
                     else:
                         return active_d
@@ -263,8 +288,8 @@ def pathFinder(start): # Pathfinding algorithm for enemies (Put in separate file
                 if used_area[active_x + d_x][active_y + d_y]:
                     continue
 
-                for i, a in enumerate(active):
-                    if a[2] + a[3] >= active_g + 1 + active_h:
+                for i, a in enumerate(active): # Create new node in direction if all above conditions were ignored
+                    if a[2] + a[3] >= active_g + 1 + active_h: # Placing node in the suitable spot
                         try:
                             if a[3] >= abs(active_x + d_x - mip.x) + abs(active_y + d_y - mip.y) \
                                             or a[2] + a[3] != active[i + 1][2] + active[i + 1][3]:
@@ -298,10 +323,10 @@ class particle(object):
         self.frames = tiles_all[5][0:5]
 
     def update(self):
-        self.frame = int((time.time() - self.time) * self.fps % self.nof)
         if int((time.time() - self.time) * self.fps % (self.nof + 1)) == 5:
             particles.remove(self)
         else:
+            self.frame = int((time.time() - self.time) * self.fps % self.nof)
             win_x, win_y = self.x - mip.x + win_center, self.y - mip.y + win_center
             win.blit(self.frames[self.frame], (win_x * tile_scale, win_y * tile_scale))
 
@@ -351,9 +376,7 @@ class basicEnemy(object):
                     for d_y in range(-1, 2):
                         if abs(d_x) == abs(d_y):
                             continue
-                        if world.pixels[self.x + d_x, self.y + d_y] == world.WALL:
-                            continue
-                        if enemy_area[self.x + d_x][self.y + d_y]:
+                        if world.pixels[self.x + d_x, self.y + d_y] == world or enemy_area[self.x + d_x][self.y + d_y]:
                             continue
                         particles.append(particle(self.x + d_x, self.y + d_y))
             else:
@@ -426,8 +449,13 @@ def allControls():
 
 
 def updateWin():
+    # Map
     world.draw(mip.x, mip.y)
+    # Player / Statistics
     mip.draw()
+    # Estetic
+    win.blit(frame_final, (0, 0))
+
 
     pg.display.update()
 
@@ -435,7 +463,6 @@ def updateWin():
 # Startup
 mip = player(1, 1)
 world = world()
-p = particle(4, 4)
 
 # Main
 run = True
