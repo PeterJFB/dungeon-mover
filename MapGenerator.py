@@ -116,4 +116,4 @@ def generateMap(size, room_size, start, show=False):
         w.show()
     return world, rooms, enemies_pos
 
-# generateMap((3, 3), (2, 2), True)
+# generateMap((5, 5), (10, 10), (3, 3),True)

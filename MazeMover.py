@@ -49,7 +49,7 @@ tiles_all = [[pg.transform.scale(t, (tile_scale, tile_scale)) for t in tile] for
 
 
 # counter
-counter_font = pg.font.Font("Ode to Idle Gaming.ttf", 32)
+counter_font = pg.font.Font("OdeToIdleGamingFont.ttf", 32)
 
 # Frame PLS FINISH
 frame = pg.transform.scale(tiles_all[6][4], (win_size, win_size))
