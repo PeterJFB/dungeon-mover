@@ -86,7 +86,7 @@ class GenerateWorld(object):
         self.enemies_left = {}
 
         # Game Over
-        self.GO = 1  # Seconds
+        self.GO = 0.5  # Seconds
         self.GO_time = time.time()
 
     def draw(self, x, y):
