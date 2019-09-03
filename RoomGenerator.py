@@ -35,7 +35,7 @@ class generateRoom(object):
             room_pix[randint(1, self.room.size[0] - 2), randint(1, self.room.size[1] - 2)] = BLACK
 
         # Enemies
-        for e in range(self.enemies):
+        for e in range(self.enemies if typ == "other" else 1):
             e_x = randint(4, self.room.size[0] - 5) if typ in ['start', 'end'] else randint(1, self.room.size[0] - 2)
             e_y = randint(4, self.room.size[1] - 5) if typ in ['start', 'end'] else randint(1, self.room.size[1] - 2)
 

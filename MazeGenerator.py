@@ -79,5 +79,4 @@ def generateMaze(size, start, show=False):
         frame_pix[0, 1] = BLUE
         frame = frame.resize((1000, 1000), Image.NEAREST)
         frame.show()
-
     return True

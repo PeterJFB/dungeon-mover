@@ -50,21 +50,17 @@ tiles_all = [[pg.transform.scale(t, (tile_scale, tile_scale)) for t in tile] for
 
 # counter
 counter_font = pg.font.Font("OdeToIdleGamingFont.ttf", 32)
+counter_font_menu = pg.font.Font("OdeToIdleGamingFont.ttf", 64)
 
-# Frame PLS FINISH
-frame = pg.transform.scale(tiles_all[6][4], (win_size, win_size))
-for x in range(win_tiles):
-    for y in range(win_tiles):
-        if x not in [0, win_tiles - 1] and y not in [0, win_tiles - 1]:
-            continue
+# Frame
 frame_final = pg.image.load("frame.png")
 
-"""DEVTOOL"""
+"""DEVTOOL
 heat = False
-"""^^^"""
+"""
 # World
 
-class world(object):
+class GenerateWorld(object):
     def __init__(self):
         # Draw
         self.world, self.rooms, self.enemies_pos = mg.generateMap(world_size, room_size, (3, 3), True)
@@ -89,6 +85,10 @@ class world(object):
         self.enemies = []
         self.enemies_left = {}
 
+        # Game Over
+        self.GO = 1  # Seconds
+        self.GO_time = time.time()
+
     def draw(self, x, y):
         # Draw Tiles
         for win_x in range(win_tiles):
@@ -107,6 +107,13 @@ class world(object):
         for enemy in world.enemies:
             if x - win_center <= enemy.x < x + win_center + 1 and y - win_center <= enemy.y < y + win_center + 1:
                 enemy.draw((enemy.x - x + win_center) * tile_scale, (enemy.y - y + win_center) * tile_scale)
+        if mip.hp <= 0 and not particles:
+            if time.time() - self.GO_time < 1:
+                self.GO -= time.time() - self.GO_time
+            self.GO_time = time.time()
+        if self.GO <= 0:
+            global mode
+            mode = "GO"
 
 
     def openExits(self, x, y): # Open exit of specific room
@@ -154,11 +161,11 @@ class player(object):
     def draw(self, x=win_center, y=win_center):
         # Draw Player
         t = time.time() - self.attack_time
-        if self.attack and not -1 * t**2 + 0.1*t <= 0:
-            d_x = int(self.attack[0] * 2000 * (-1 * t**2 + 0.1*t)) * 2 * scale
-            d_y = int(self.attack[1] * 2000 * (-1 * t**2 + 0.1*t)) * 2 * scale
+        if self.attack and not -1 * t**2 + 0.1*t <= 0 and not mip.hp <= 0:
+            d_x = int(self.attack[0] * 3600 * (-1 * t**2 + 0.1*t)) * 2 * scale
+            d_y = int(self.attack[1] * 3600 * (-1 * t**2 + 0.1*t)) * 2 * scale
             win.blit(self.standby[self.standby_frame], (d_x + x * tile_scale, d_y + y * tile_scale))
-        else:
+        elif not mip.hp <= 0:
             self.standby_frame = int((time.time() - self.standby_time) * self.standby_fps % self.standby_nof)
             win.blit(self.standby[self.standby_frame], (x * tile_scale, y * tile_scale))
         # Draw Healthbar
@@ -191,10 +198,16 @@ class player(object):
             if world.pixels[self.x + d_x, self.y + d_y] not in [world.WALL, world.GATE]:
                 self.x, self.y = self.x + d_x, self.y + d_y
 
+        # Enemies
         world.enemies.sort(key=lambda e: abs(e.x - self.x) + abs(e.y - self.y))
         for enemy in world.enemies:
             enemy.action()
 
+        # Particles
+        global area_time
+        area_time = time.time()
+
+        # Update room position / Generate enemies
         self.room_x = self.x // room_size[0]
         self.room_y = self.y // room_size[1]
 
@@ -217,7 +230,7 @@ class player(object):
         elif keyPress("K_s"):
             self.action(0, 1)
 
-            """DEVTOOLS"""
+            """DEVTOOLS
         elif keyPress("K_k"): # Open exit of first room
             world.openExits(0, 0)
         elif keyPress("K_e"): # Update enemy action with heatmap (move, hurt or die)
@@ -229,6 +242,7 @@ class player(object):
         elif keyPress("K_p"):
             global p
             particles.append(particle(4, 4))
+            """
 
 
 enemy_area = [[0 for y in range(world_size[1] * room_size[1])] for x in range(world_size[0] * room_size[0])]
@@ -263,22 +277,22 @@ def pathFinder(start): # Pathfinding algorithm for enemies (Put in separate file
         active_x, active_y = active[0][0][0], active[0][0][1]
         active_d = active[0][1]
         active_g, active_h = active[0][2], active[0][3]
-
+        """DEVTOOLS
         if heat:
             history.append([active_x, active_y]) # History for heatmap
-
+        """
         for d_x in range(-1, 2):
             for d_y in range(-1, 2):
 
-                if abs(d_x) == abs(d_y): # Ignore corners and center
+                if abs(d_x) == abs(d_y):  # Ignore corners and center
                     continue
 
-                if [active_x + d_x, active_y + d_y] == [mip.x, mip.y]: # If player is found
-                    """DEVTOOLS"""
+                if [active_x + d_x, active_y + d_y] == [mip.x, mip.y]:  # If player is found
+                    """DEVTOOLS
                     if heat:
                         hg.heatMap(history)
-                    """^^^"""
-                    if enemy_area[start[0] + active_d[0]][start[1] + active_d[1]]: # Won't move if enemy is in the way
+                    """
+                    if enemy_area[start[0] + active_d[0]][start[1] + active_d[1]]:  # Won't move if enemy is in the way
                         return [0, 0]
                     else:
                         return active_d
@@ -288,8 +302,8 @@ def pathFinder(start): # Pathfinding algorithm for enemies (Put in separate file
                 if used_area[active_x + d_x][active_y + d_y]:
                     continue
 
-                for i, a in enumerate(active): # Create new node in direction if all above conditions were ignored
-                    if a[2] + a[3] >= active_g + 1 + active_h: # Placing node in the suitable spot
+                for i, a in enumerate(active):  # Create new node in direction if all above conditions were ignored
+                    if a[2] + a[3] >= active_g + 1 + active_h:  # Placing node in the suitable spot
                         try:
                             if a[3] >= abs(active_x + d_x - mip.x) + abs(active_y + d_y - mip.y) \
                                             or a[2] + a[3] != active[i + 1][2] + active[i + 1][3]:
@@ -311,7 +325,11 @@ def pathFinder(start): # Pathfinding algorithm for enemies (Put in separate file
         if kill == 100:
             break
     return [0, 0]
+
+
 particles = []
+
+
 class particle(object):
     def __init__(self, x, y):
         self.x = x
@@ -330,6 +348,7 @@ class particle(object):
             win_x, win_y = self.x - mip.x + win_center, self.y - mip.y + win_center
             win.blit(self.frames[self.frame], (win_x * tile_scale, win_y * tile_scale))
 
+area_time = time.time()
 
 # Enemy
 class basicEnemy(object):
@@ -370,13 +389,13 @@ class basicEnemy(object):
             if self.b_up:
                 if abs(mip.x - self.x) + abs(mip.y - self.y) == 1:
                     mip.hp -= 1
-                    print(mip.hp)
                 self.b_up = False
                 for d_x in range(-1, 2):
                     for d_y in range(-1, 2):
                         if abs(d_x) == abs(d_y):
                             continue
-                        if world.pixels[self.x + d_x, self.y + d_y] == world or enemy_area[self.x + d_x][self.y + d_y]:
+                        if world.pixels[self.x + d_x, self.y + d_y] in [world.WALL, world.GATE] \
+                                or enemy_area[self.x + d_x][self.y + d_y]:
                             continue
                         particles.append(particle(self.x + d_x, self.y + d_y))
             else:
@@ -415,7 +434,7 @@ class basicEnemy(object):
                         continue
                     if enemy_area[self.x + d_x][self.y + d_y]:
                         continue
-                    area_frame = int((time.time() - mip.standby_time) * 2 % 2)
+                    area_frame = int((time.time() - area_time) * 3 % 2)
                     win.blit(self.a_area[area_frame], (pos_x + d_x * tile_scale, pos_y + d_y * tile_scale))
 
 
@@ -443,6 +462,52 @@ def keyPress(k):
 
     return False
 
+# Buttons
+
+class button(object):
+    def __init__(self, imgs, x, y, code):
+        global menu, run
+        self.imgs = imgs
+        self.x = x
+        self.y = y
+        self.code = code
+        self.hover = False
+        self.click = False
+
+    def update(self, event):
+        if (self.imgs[0]).get_rect(topleft=(self.x, self.y)).collidepoint(pg.mouse.get_pos()):
+            self.hover = True
+        else:
+            self.hover = False
+        if event.type == pg.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                if self.hover:
+                    self.click = True
+        elif event.type == pg.MOUSEBUTTONUP and event.button == 1:
+            if self.click and self.hover:
+                self.click = False
+                exec(self.code, globals())
+
+    def draw(self):
+        if self.hover:
+            if self.click:
+                win.blit(self.imgs[2], (self.x, self.y))
+            else:
+                win.blit(self.imgs[1], (self.x, self.y))
+        else:
+            win.blit(self.imgs[0], (self.x, self.y))
+
+
+
+buttons = [button([pg.image.load("menu_imgs/Start.png"), pg.image.load("menu_imgs/StartHover.png"),
+                   pg.image.load("menu_imgs/StartClick.png")],
+                  232, 441, "if True : menu, mode, mode_new = False, 'G', True"),
+           button([pg.image.load("menu_imgs/Exit.png"), pg.image.load("menu_imgs/ExitHover.png"),
+                   pg.image.load("menu_imgs/ExitClick.png")],
+                  232, 563, "if True : menu, run = False, False")
+           ]
+
+
 # Grouping
 def allControls():
     mip.controls()
@@ -460,19 +525,110 @@ def updateWin():
     pg.display.update()
 
 
-# Startup
-mip = player(1, 1)
-world = world()
+# menu_imgs
+menu_imgs = [pg.image.load("menu_imgs/Startmenu.png"),
+        [pg.image.load("menu_imgs/Start.png"), pg.image.load("menu_imgs/StartHover.png"), pg.image.load("menu_imgs/StartClick.png")],
+        [pg.image.load("menu_imgs/Exit.png"), pg.image.load("menu_imgs/ExitHover.png"), pg.image.load("menu_imgs/ExitClick.png")]]
 
-# Main
 run = True
-while run:
+menu = True
 
-    allControls()
+while menu:
+    win.blit(menu_imgs[0], (0, 0))
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            menu, run = False, False
+        else:
+            for b in buttons:
+                b.update(event)
+    for b in buttons:
+        b.draw()
+
+
+    pg.display.update()
+# Startup
+def GameInit():
+    global mip, world, particles, enemy_area, clock
+    if run:
+        mip = player(1, 1)
+        world = GenerateWorld()
+        particles = []
+        enemy_area = [[0 for y in range(world_size[1] * room_size[1])] for x in range(world_size[0] * room_size[0])]
+        clock = pg.time.Clock()
+
+# Game
+def Game():
+    global run
+    if not mip.hp <= 0:
+        allControls()
     updateWin()
 
     if [mip.x, mip.y] == [world.size[0] - 3, world.size[1] - 3]:
-        run = False
+        global mode
+        mode = "C"
+
+# GameOver
+go_img = pg.image.load("menu_imgs/GameOver.png")
+def GameOver():
+    global run
+    win.blit(go_img, (0, 0))
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            run = False
+        else:
+            for b in buttons:
+                b.update(event)
+    for b in buttons:
+        b.draw()
+
+    counter_text = counter_font_menu.render(": " + str(mip.counter) + "p :", False, (155, 188, 15))
+    counter_rect = counter_text.get_rect()
+    counter_rect.center = (win_size // 2, win_size // 2 - 20)
+    counter_text_outline = counter_font_menu.render(": " + str(mip.counter) + "p :", False, (15, 56, 15))
+    for d_x in range(-1, 2):
+        for d_y in range(-1, 2):
+            win.blit(counter_text_outline, (counter_rect.x + d_x * 8, counter_rect.y + d_y * 8))
+    win.blit(counter_text, counter_rect)
+
+    pg.display.update()
+
+# MazeCompleted
+c_img = pg.image.load("menu_imgs/Completed.png")
+def Completed():
+    global run
+    win.blit(c_img, (0, 0))
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            run = False
+        else:
+            for b in buttons:
+                b.update(event)
+    for b in buttons:
+        b.draw()
+
+    counter_text = counter_font_menu.render(": " + str(mip.counter) + "p :", False, (155, 188, 15))
+    counter_rect = counter_text.get_rect()
+    counter_rect.center = (win_size // 2, win_size // 2 - 20)
+    counter_text_outline = counter_font_menu.render(": " + str(mip.counter) + "p :", False, (15, 56, 15))
+    for d_x in range(-1, 2):
+        for d_y in range(-1, 2):
+            win.blit(counter_text_outline, (counter_rect.x + d_x * 8, counter_rect.y + d_y * 8))
+    win.blit(counter_text, counter_rect)
+
+    pg.display.update()
+
+modes = {"G": ["GameInit()", "Game()"],
+         "GO": ["()", "GameOver()"],
+         "C": ["()", "Completed()"]}
+mode = "G"
+mode_new = True
+
+while run:
+    if mode_new:
+        eval(modes[mode][0])
+        mode_new = False
+
+    eval(modes[mode][1])
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
