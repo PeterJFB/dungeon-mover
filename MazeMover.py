@@ -9,8 +9,9 @@ from PIL import Image
 import time
 
 import MapGenerator as mg
+"""DEVTOOL
 import HeatmapGenerator as hg
-
+"""
 pg.init()
 
 # World
@@ -34,7 +35,7 @@ pg.display.set_caption("W A S D")
 clock = pg.time.Clock()
 
 # Load tileset
-tileset = pg.image.load("Tileset32.png")
+tileset = pg.image.load("Tileset.png")
 tileset_dim = tileset.get_size()
 
 tiles = []
